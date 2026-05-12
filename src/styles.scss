@@ -1,0 +1,20 @@
+/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+@import "ng-diagram/styles.css";
+
+@theme {
+  --color-telecom-bg: #0f172a;
+  --color-telecom-panel: #1e293b;
+  --color-telecom-border: #334155;
+  --color-telecom-accent: #3b82f6;
+  --color-telecom-accent-hover: #60a5fa;
+  --color-telecom-success: #10b981;
+  --color-telecom-warning: #f59e0b;
+  --color-telecom-danger: #ef4444;
+}
+
+body {
+  @apply bg-telecom-bg text-slate-200 overflow-hidden;
+  margin: 0;
+  padding: 0;
+}

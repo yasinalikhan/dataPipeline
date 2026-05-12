@@ -1,3 +1,96 @@
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
 
-@import 'tailwindcss';
+:root {
+  /* Default: Dark Theme */
+  --bg-base: #0f172a;
+  --bg-panel: #1e293b;
+  --bg-card: #1e293b;
+  --bg-card-hover: #1e293b;
+  --border-color: #334155;
+  --border-hover: #a78bfa;
+  
+  --text-main: #e2e8f0;
+  --text-muted: #64748b;
+  --text-secondary: #94a3b8;
+  --text-value: #cbd5e1;
+  
+  --accent-primary: #3b82f6;
+  --accent-secondary: #8b5cf6;
+  --accent-hover: #60a5fa;
+  
+  --btn-ghost-bg: #334155;
+  --btn-ghost-hover: #475569;
+  
+  --canvas-dots: #334155;
+  --edge-stroke: #64748b;
+  --edge-stroke-hover: #cbd5e1;
+  
+  --icon-bg: #0f172a;
+  --icon-color: #94a3b8;
+  --port-bg: #a78bfa;
+  --port-border: #0f172a;
+  
+  --header-border: #334155;
+  --palette-hover-bg: #1e293b;
+  --palette-hover-shadow: rgba(59, 130, 246, 0.15);
+  --form-input-bg: #0f172a;
+}
+
+:root[data-theme="light"] {
+  /* Light Theme */
+  --bg-base: #f8fafc;
+  --bg-panel: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --border-color: #e2e8f0;
+  --border-hover: #8b5cf6;
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-secondary: #475569;
+  --text-value: #334155;
+  
+  --accent-primary: #2563eb;
+  --accent-secondary: #7c3aed;
+  --accent-hover: #3b82f6;
+  
+  --btn-ghost-bg: #e2e8f0;
+  --btn-ghost-hover: #cbd5e1;
+  
+  --canvas-dots: #cbd5e1;
+  --edge-stroke: #94a3b8;
+  --edge-stroke-hover: #475569;
+  
+  --icon-bg: #f1f5f9;
+  --icon-color: #64748b;
+  --port-bg: #8b5cf6;
+  --port-border: #ffffff;
+  
+  --header-border: #e2e8f0;
+  --palette-hover-bg: #f8fafc;
+  --palette-hover-shadow: rgba(37, 99, 235, 0.1);
+  --form-input-bg: #f8fafc;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+app-root {
+  display: block;
+  height: 100vh;
+  width: 100vw;
+}
+
