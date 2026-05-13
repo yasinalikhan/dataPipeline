@@ -229,21 +229,30 @@ import { DiagramNode } from './diagram.models';
       <aside class="sidebar-left">
         <div class="sidebar-header">Components</div>
         <div class="palette">
-          <div class="palette-item" (click)="onAddNode('agent', { label: 'File Agent', status: 'completed', latency: 15 })">
+          <div class="palette-item" 
+               (click)="onAddNode('agent', { label: 'File Agent', status: 'completed', latency: 15 })"
+               draggable="true"
+               (dragstart)="onDragStart($event, 'agent', { label: 'File Agent', status: 'completed', latency: 15 })">
             <div class="palette-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M15 18a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z"/><path d="M12 15v-6"/><path d="M9 9h6"/><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/></svg>
             </div>
             <span class="palette-label">File Agent</span>
           </div>
 
-          <div class="palette-item" (click)="onAddNode('server', { label: 'Processing Server', status: 'running', latency: 250 })">
+          <div class="palette-item" 
+               (click)="onAddNode('server', { label: 'Processing Server', status: 'running', latency: 250 })"
+               draggable="true"
+               (dragstart)="onDragStart($event, 'server', { label: 'Processing Server', status: 'running', latency: 250 })">
             <div class="palette-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
             </div>
             <span class="palette-label">Processing Server</span>
           </div>
 
-          <div class="palette-item" (click)="onAddNode('database', { label: 'Data Warehouse', status: 'running', rowsProcessed: 14502 })">
+          <div class="palette-item" 
+               (click)="onAddNode('database', { label: 'Data Warehouse', status: 'running', rowsProcessed: 14502 })"
+               draggable="true"
+               (dragstart)="onDragStart($event, 'database', { label: 'Data Warehouse', status: 'running', rowsProcessed: 14502 })">
             <div class="palette-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
             </div>
@@ -373,6 +382,13 @@ export class App implements OnInit, AfterViewInit {
   onAddNode(type: string, defaultData: any) {
     if (this.diagramCanvas) {
       this.diagramCanvas.addNode(type, { ...defaultData });
+    }
+  }
+
+  onDragStart(event: DragEvent, type: string, defaultData: any) {
+    if (event.dataTransfer) {
+      event.dataTransfer.setData('application/json', JSON.stringify({ type, data: defaultData }));
+      event.dataTransfer.effectAllowed = 'copy';
     }
   }
 

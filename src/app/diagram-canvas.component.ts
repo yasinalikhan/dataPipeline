@@ -164,6 +164,20 @@ export class DiagramCanvasComponent implements AfterViewInit {
     this.notifyChange();
   }
 
+  addNodeAtPoint(type: string, data: any, clientX: number, clientY: number) {
+    const pos = this.clientToCanvas(clientX, clientY);
+    const newNode: DiagramNode = {
+      id: 'node_' + Math.random().toString(36).substr(2, 9),
+      type,
+      x: Math.round(pos.x / 20) * 20,
+      y: Math.round(pos.y / 20) * 20,
+      data
+    };
+    this.nodes.push(newNode);
+    this.selectNode(newNode);
+    this.notifyChange();
+  }
+
   updateSelectedNodeData(data: any) {
     if (this.selectedNodeId) {
       const node = this.nodes.find(n => n.id === this.selectedNodeId);
@@ -297,6 +311,28 @@ export class DiagramCanvasComponent implements AfterViewInit {
   }
 
   // Global Pointer Events
+  @HostListener('dragover', ['$event'])
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  @HostListener('drop', ['$event'])
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    const dataStr = event.dataTransfer?.getData('application/json');
+    if (dataStr) {
+      try {
+        const payload = JSON.parse(dataStr);
+        this.addNodeAtPoint(payload.type, payload.data, event.clientX, event.clientY);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
   @HostListener('pointermove', ['$event'])
   onPointerMove(event: PointerEvent) {
     if (this.isDraggingCanvas) {
