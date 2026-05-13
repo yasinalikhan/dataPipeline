@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, HostListener } from '@angular/core';
+import { Component, OnInit, ViewChild, HostListener, AfterViewInit, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DiagramCanvasComponent } from './diagram-canvas.component';
@@ -189,6 +189,23 @@ import { DiagramNode } from './diagram.models';
       </div>
 
       <div class="actions">
+        <input type="file" #fileInput (change)="onFileSelected($event)" accept=".json" style="display: none;">
+        
+        <button class="btn btn-ghost" (click)="onClearAll()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+          Clear
+        </button>
+
+        <button class="btn btn-ghost" (click)="onImport()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Import
+        </button>
+
+        <button class="btn btn-ghost" (click)="onExport()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Export
+        </button>
+
         <button class="btn btn-ghost" (click)="toggleTheme()">
           <svg *ngIf="isDarkTheme" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           <svg *ngIf="!isDarkTheme" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -227,7 +244,7 @@ import { DiagramNode } from './diagram.models';
 
       <!-- Main Canvas -->
       <main class="canvas-area">
-        <app-diagram-canvas (nodeSelected)="onNodeSelected($event)" (edgeSelected)="onEdgeSelected($event)"></app-diagram-canvas>
+        <app-diagram-canvas (nodeSelected)="onNodeSelected($event)" (edgeSelected)="onEdgeSelected($event)" (canvasChanged)="onCanvasChanged()"></app-diagram-canvas>
       </main>
 
       <!-- Properties Sidebar -->
@@ -292,8 +309,9 @@ import { DiagramNode } from './diagram.models';
     </div>
   `
 })
-export class App implements OnInit {
+export class App implements OnInit, AfterViewInit {
   @ViewChild(DiagramCanvasComponent) diagramCanvas!: DiagramCanvasComponent;
+  @ViewChild('fileInput') fileInput!: ElementRef;
 
   isDarkTheme = true;
   selectionType: 'node' | 'edge' | null = null;
@@ -305,6 +323,18 @@ export class App implements OnInit {
       this.isDarkTheme = savedTheme === 'dark';
     }
     this.applyTheme();
+  }
+
+  ngAfterViewInit() {
+    // Load state after view init so canvas component is available
+    const savedState = localStorage.getItem('pipeline-state');
+    if (savedState && this.diagramCanvas) {
+      try {
+        this.diagramCanvas.loadCanvasState(JSON.parse(savedState));
+      } catch(e) {
+        console.error('Failed to load state', e);
+      }
+    }
   }
 
   toggleTheme() {
@@ -371,5 +401,59 @@ export class App implements OnInit {
     if (this.diagramCanvas) {
       this.diagramCanvas.deleteSelected();
     }
+  }
+
+  onCanvasChanged() {
+    if (this.diagramCanvas) {
+      const state = this.diagramCanvas.getCanvasState();
+      localStorage.setItem('pipeline-state', JSON.stringify(state));
+    }
+  }
+
+  onClearAll() {
+    if (confirm('Are you sure you want to clear the canvas? All progress will be lost.')) {
+      if (this.diagramCanvas) {
+        this.diagramCanvas.clearCanvas();
+        localStorage.removeItem('pipeline-state');
+      }
+    }
+  }
+
+  onExport() {
+    if (this.diagramCanvas) {
+      const state = this.diagramCanvas.getCanvasState();
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pipeline-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  onImport() {
+    this.fileInput.nativeElement.click();
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        try {
+          const state = JSON.parse(e.target.result);
+          if (this.diagramCanvas) {
+            this.diagramCanvas.loadCanvasState(state);
+            this.onCanvasChanged(); // save newly imported state to local storage
+          }
+        } catch (error) {
+          alert('Invalid JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+    // reset input
+    event.target.value = '';
   }
 }

@@ -111,6 +111,11 @@ export class DiagramCanvasComponent implements AfterViewInit {
 
   @Output() nodeSelected = new EventEmitter<DiagramNode | null>();
   @Output() edgeSelected = new EventEmitter<DiagramEdge | null>();
+  @Output() canvasChanged = new EventEmitter<void>();
+
+  private notifyChange() {
+    this.canvasChanged.emit();
+  }
 
   @HostBinding('style.background-position') get bgPos() {
     return `${this.panX}px ${this.panY}px`;
@@ -153,6 +158,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
     };
     this.nodes.push(newNode);
     this.selectNode(newNode);
+    this.notifyChange();
   }
 
   updateSelectedNodeData(data: any) {
@@ -160,6 +166,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
       const node = this.nodes.find(n => n.id === this.selectedNodeId);
       if (node) {
         node.data = { ...data };
+        this.notifyChange();
       }
     }
   }
@@ -183,10 +190,44 @@ export class DiagramCanvasComponent implements AfterViewInit {
       this.nodes = this.nodes.filter(n => n.id !== this.selectedNodeId);
       this.edges = this.edges.filter(e => e.sourceNodeId !== this.selectedNodeId && e.targetNodeId !== this.selectedNodeId);
       this.selectNode(null);
+      this.notifyChange();
     } else if (this.selectedEdgeId) {
       this.edges = this.edges.filter(e => e.id !== this.selectedEdgeId);
       this.selectEdge(null);
+      this.notifyChange();
     }
+  }
+
+  getCanvasState() {
+    return {
+      nodes: this.nodes,
+      edges: this.edges,
+      panX: this.panX,
+      panY: this.panY,
+      zoom: this.zoom
+    };
+  }
+
+  loadCanvasState(state: any) {
+    if (!state) return;
+    this.nodes = state.nodes || [];
+    this.edges = state.edges || [];
+    this.panX = state.panX || 0;
+    this.panY = state.panY || 0;
+    this.zoom = state.zoom || 1;
+    this.selectNode(null);
+    this.selectEdge(null);
+  }
+
+  clearCanvas() {
+    this.nodes = [];
+    this.edges = [];
+    this.panX = 0;
+    this.panY = 0;
+    this.zoom = 1;
+    this.selectNode(null);
+    this.selectEdge(null);
+    this.notifyChange();
   }
 
   // Canvas Interactions
@@ -219,6 +260,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
     this.panX -= x * (newZoom - this.zoom) / this.zoom;
     this.panY -= y * (newZoom - this.zoom) / this.zoom;
     this.zoom = newZoom;
+    this.notifyChange();
   }
 
   // Node & Port Interactions
@@ -276,10 +318,12 @@ export class DiagramCanvasComponent implements AfterViewInit {
   onPointerUp(event: PointerEvent) {
     if (this.isDraggingCanvas) {
       this.isDraggingCanvas = false;
+      this.notifyChange();
       (event.target as Element)?.releasePointerCapture(event.pointerId);
     }
     if (this.draggingNode) {
       this.draggingNode = null;
+      this.notifyChange();
       (event.target as Element)?.releasePointerCapture(event.pointerId);
     }
     if (this.draftEdge) {
@@ -305,6 +349,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
               sourceNodeId: this.draftEdge.sourceNodeId,
               targetNodeId: targetId
             });
+            this.notifyChange();
           }
         }
       }
