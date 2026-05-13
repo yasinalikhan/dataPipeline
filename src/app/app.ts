@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DiagramCanvasComponent } from './diagram-canvas.component';
@@ -227,31 +227,31 @@ import { DiagramNode } from './diagram.models';
 
       <!-- Main Canvas -->
       <main class="canvas-area">
-        <app-diagram-canvas (nodeSelected)="onNodeSelected($event)"></app-diagram-canvas>
+        <app-diagram-canvas (nodeSelected)="onNodeSelected($event)" (edgeSelected)="onEdgeSelected($event)"></app-diagram-canvas>
       </main>
 
       <!-- Properties Sidebar -->
       <aside class="sidebar-right">
         <div class="sidebar-header">Configuration</div>
         
-        <div class="empty-state" *ngIf="!selectedNodeData">
-          Select a component on the canvas to view and edit its properties.
+        <div class="empty-state" *ngIf="!selectionType">
+          Select a component or connection on the canvas to view and edit its properties.
         </div>
 
-        <div class="properties-panel" *ngIf="selectedNodeData">
+        <div class="properties-panel" *ngIf="selectionType === 'node' && selectedItemData">
           <div class="form-group">
             <label>Name</label>
-            <input type="text" class="form-control" [(ngModel)]="selectedNodeData.label" (ngModelChange)="onNodeDataChange()">
+            <input type="text" class="form-control" [(ngModel)]="selectedItemData.label" (ngModelChange)="onItemDataChange()">
           </div>
           
           <div class="form-group">
             <label>Component Type</label>
-            <input type="text" class="form-control" [value]="selectedNodeData.type" disabled style="opacity: 0.7;">
+            <input type="text" class="form-control" [value]="selectedItemData.type" disabled style="opacity: 0.7;">
           </div>
           
           <div class="form-group">
             <label>Execution Status</label>
-            <select class="form-control" [(ngModel)]="selectedNodeData.status" (ngModelChange)="onNodeDataChange()">
+            <select class="form-control" [(ngModel)]="selectedItemData.status" (ngModelChange)="onItemDataChange()">
               <option value="stopped">Stopped</option>
               <option value="running">Running</option>
               <option value="completed">Completed</option>
@@ -259,14 +259,33 @@ import { DiagramNode } from './diagram.models';
             </select>
           </div>
 
-          <div class="form-group" *ngIf="selectedNodeData.rowsProcessed !== undefined">
+          <div class="form-group" *ngIf="selectedItemData.rowsProcessed !== undefined">
             <label>Rows Processed</label>
-            <input type="number" class="form-control" [(ngModel)]="selectedNodeData.rowsProcessed" (ngModelChange)="onNodeDataChange()">
+            <input type="number" class="form-control" [(ngModel)]="selectedItemData.rowsProcessed" (ngModelChange)="onItemDataChange()">
           </div>
 
-          <div class="form-group" *ngIf="selectedNodeData.latency !== undefined">
+          <div class="form-group" *ngIf="selectedItemData.latency !== undefined">
             <label>Latency (ms)</label>
-            <input type="number" class="form-control" [(ngModel)]="selectedNodeData.latency" (ngModelChange)="onNodeDataChange()">
+            <input type="number" class="form-control" [(ngModel)]="selectedItemData.latency" (ngModelChange)="onItemDataChange()">
+          </div>
+
+          <div class="form-group" style="margin-top: auto; padding-top: 20px;">
+            <button class="btn btn-ghost" style="color: #ef4444; border: 1px solid #ef4444; justify-content: center; width: 100%;" (click)="onDeleteSelected()">
+              Delete Component
+            </button>
+          </div>
+        </div>
+
+        <div class="properties-panel" *ngIf="selectionType === 'edge' && selectedItemData">
+          <div class="form-group">
+            <label>Connection ID</label>
+            <input type="text" class="form-control" [value]="selectedItemData.id" disabled style="opacity: 0.7;">
+          </div>
+          
+          <div class="form-group" style="margin-top: auto; padding-top: 20px;">
+            <button class="btn btn-ghost" style="color: #ef4444; border: 1px solid #ef4444; justify-content: center; width: 100%;" (click)="onDeleteSelected()">
+              Delete Connection
+            </button>
           </div>
         </div>
       </aside>
@@ -277,7 +296,8 @@ export class App implements OnInit {
   @ViewChild(DiagramCanvasComponent) diagramCanvas!: DiagramCanvasComponent;
 
   isDarkTheme = true;
-  selectedNodeData: any = null;
+  selectionType: 'node' | 'edge' | null = null;
+  selectedItemData: any = null;
 
   ngOnInit() {
     const savedTheme = localStorage.getItem('theme-preference');
@@ -309,17 +329,47 @@ export class App implements OnInit {
 
   onNodeSelected(node: DiagramNode | null) {
     if (node) {
-      this.selectedNodeData = { ...node.data, type: node.type };
-    } else {
-      this.selectedNodeData = null;
+      this.selectionType = 'node';
+      this.selectedItemData = { ...node.data, type: node.type };
+    } else if (this.selectionType === 'node') {
+      this.selectionType = null;
+      this.selectedItemData = null;
     }
   }
 
-  onNodeDataChange() {
-    if (this.diagramCanvas && this.selectedNodeData) {
+  onEdgeSelected(edge: any | null) {
+    if (edge) {
+      this.selectionType = 'edge';
+      this.selectedItemData = { id: edge.id, source: edge.sourceNodeId, target: edge.targetNodeId };
+    } else if (this.selectionType === 'edge') {
+      this.selectionType = null;
+      this.selectedItemData = null;
+    }
+  }
+
+  onItemDataChange() {
+    if (this.diagramCanvas && this.selectionType === 'node' && this.selectedItemData) {
       // Remove type before passing data back
-      const { type, ...dataToSave } = this.selectedNodeData;
+      const { type, ...dataToSave } = this.selectedItemData;
       this.diagramCanvas.updateSelectedNodeData(dataToSave);
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Prevent deleting if user is typing in an input field
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+      }
+      this.onDeleteSelected();
+    }
+  }
+
+  onDeleteSelected() {
+    if (this.diagramCanvas) {
+      this.diagramCanvas.deleteSelected();
     }
   }
 }

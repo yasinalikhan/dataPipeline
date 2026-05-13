@@ -54,6 +54,10 @@ import { DiagramNode, DiagramEdge, Point } from './diagram.models';
     .edge-path:hover {
       stroke: var(--edge-stroke-hover);
     }
+    .edge-path.selected {
+      stroke: var(--accent-primary);
+      filter: drop-shadow(0 0 4px var(--accent-primary));
+    }
     .edge-path.draft {
       stroke-dasharray: 5, 5;
       stroke: var(--accent-primary);
@@ -75,7 +79,9 @@ import { DiagramNode, DiagramEdge, Point } from './diagram.models';
           <path 
             *ngFor="let edge of edges" 
             class="edge-path" 
-            [attr.d]="getEdgePath(edge)">
+            [class.selected]="edge.id === selectedEdgeId"
+            [attr.d]="getEdgePath(edge)"
+            (pointerdown)="onEdgePointerDown($event, edge)">
           </path>
           
           <!-- Render draft edge -->
@@ -104,6 +110,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
   @ViewChild('content') contentRef!: ElementRef;
 
   @Output() nodeSelected = new EventEmitter<DiagramNode | null>();
+  @Output() edgeSelected = new EventEmitter<DiagramEdge | null>();
 
   @HostBinding('style.background-position') get bgPos() {
     return `${this.panX}px ${this.panY}px`;
@@ -115,6 +122,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
   nodes: DiagramNode[] = [];
   edges: DiagramEdge[] = [];
   selectedNodeId: string | null = null;
+  selectedEdgeId: string | null = null;
 
   // Viewport state
   panX = 0;
@@ -158,7 +166,27 @@ export class DiagramCanvasComponent implements AfterViewInit {
 
   selectNode(node: DiagramNode | null) {
     this.selectedNodeId = node ? node.id : null;
+    this.selectedEdgeId = null;
     this.nodeSelected.emit(node);
+    if (node) this.edgeSelected.emit(null);
+  }
+
+  selectEdge(edge: DiagramEdge | null) {
+    this.selectedEdgeId = edge ? edge.id : null;
+    this.selectedNodeId = null;
+    this.edgeSelected.emit(edge);
+    if (edge) this.nodeSelected.emit(null);
+  }
+
+  deleteSelected() {
+    if (this.selectedNodeId) {
+      this.nodes = this.nodes.filter(n => n.id !== this.selectedNodeId);
+      this.edges = this.edges.filter(e => e.sourceNodeId !== this.selectedNodeId && e.targetNodeId !== this.selectedNodeId);
+      this.selectNode(null);
+    } else if (this.selectedEdgeId) {
+      this.edges = this.edges.filter(e => e.id !== this.selectedEdgeId);
+      this.selectEdge(null);
+    }
   }
 
   // Canvas Interactions
@@ -170,6 +198,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
       this.isDraggingCanvas = true;
       this.lastPointerPos = { x: event.clientX, y: event.clientY };
       this.selectNode(null); // Deselect
+      this.selectEdge(null);
       
       (event.target as Element)?.setPointerCapture(event.pointerId);
     }
@@ -195,6 +224,12 @@ export class DiagramCanvasComponent implements AfterViewInit {
   // Node & Port Interactions
   onNodeSelected(node: DiagramNode) {
     this.selectNode(node);
+  }
+
+  onEdgePointerDown(event: PointerEvent, edge: DiagramEdge) {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    this.selectEdge(edge);
   }
 
   onNodeDragStart(data: {event: PointerEvent, node: DiagramNode}) {
