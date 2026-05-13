@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, ElementRef, ViewChild, AfterViewInit, HostListener, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DiagramNodeComponent } from './diagram-node.component';
-import { DiagramNode, DiagramEdge, Point } from './diagram.models';
+import { DiagramNodeComponent } from '../diagram-node/diagram-node.component';
+import { DiagramNode, DiagramEdge, Point } from '../../models/diagram.model';
 
 @Component({
   selector: 'app-diagram-canvas',

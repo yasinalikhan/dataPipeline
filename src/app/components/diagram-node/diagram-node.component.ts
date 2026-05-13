@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, ElementRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DiagramNode } from './diagram.models';
+import { DiagramNode } from '../../models/diagram.model';
 
 @Component({
   selector: 'app-diagram-node',
