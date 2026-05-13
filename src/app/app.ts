@@ -189,6 +189,16 @@ import { DiagramNode } from './diagram.models';
       </div>
 
       <div class="actions">
+        <button class="btn btn-ghost" (click)="undo()" [disabled]="historyIndex <= 0" [style.opacity]="historyIndex <= 0 ? 0.5 : 1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+          Undo
+        </button>
+        <button class="btn btn-ghost" (click)="redo()" [disabled]="historyIndex >= history.length - 1" [style.opacity]="historyIndex >= history.length - 1 ? 0.5 : 1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path></svg>
+          Redo
+        </button>
+        <div style="width: 1px; height: 24px; background: var(--header-border); margin: 0 4px;"></div>
+
         <input type="file" #fileInput (change)="onFileSelected($event)" accept=".json" style="display: none;">
         
         <button class="btn btn-ghost" (click)="onClearAll()">
@@ -317,6 +327,10 @@ export class App implements OnInit, AfterViewInit {
   selectionType: 'node' | 'edge' | null = null;
   selectedItemData: any = null;
 
+  history: any[] = [];
+  historyIndex: number = -1;
+  isUndoRedoAction = false;
+
   ngOnInit() {
     const savedTheme = localStorage.getItem('theme-preference');
     if (savedTheme) {
@@ -330,10 +344,15 @@ export class App implements OnInit, AfterViewInit {
     const savedState = localStorage.getItem('pipeline-state');
     if (savedState && this.diagramCanvas) {
       try {
-        this.diagramCanvas.loadCanvasState(JSON.parse(savedState));
+        const state = JSON.parse(savedState);
+        this.diagramCanvas.loadCanvasState(state);
+        this.pushHistory(state);
       } catch(e) {
         console.error('Failed to load state', e);
+        this.pushHistory(this.diagramCanvas.getCanvasState());
       }
+    } else if (this.diagramCanvas) {
+      this.pushHistory(this.diagramCanvas.getCanvasState());
     }
   }
 
@@ -387,13 +406,27 @@ export class App implements OnInit, AfterViewInit {
 
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent) {
+    const activeEl = document.activeElement;
+    const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT' || activeEl.tagName === 'TEXTAREA');
+      
     if (event.key === 'Delete' || event.key === 'Backspace') {
-      // Prevent deleting if user is typing in an input field
-      const activeEl = document.activeElement;
-      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT' || activeEl.tagName === 'TEXTAREA')) {
-        return;
+      if (!isInput) {
+        this.onDeleteSelected();
       }
-      this.onDeleteSelected();
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      if (!isInput) {
+        event.preventDefault();
+        if (event.shiftKey) {
+          this.redo();
+        } else {
+          this.undo();
+        }
+      }
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+      if (!isInput) {
+        event.preventDefault();
+        this.redo();
+      }
     }
   }
 
@@ -407,6 +440,58 @@ export class App implements OnInit, AfterViewInit {
     if (this.diagramCanvas) {
       const state = this.diagramCanvas.getCanvasState();
       localStorage.setItem('pipeline-state', JSON.stringify(state));
+      if (!this.isUndoRedoAction) {
+        const stateStr = JSON.stringify(state);
+        if (this.historyIndex >= 0 && this.historyIndex < this.history.length) {
+          if (JSON.stringify(this.history[this.historyIndex]) === stateStr) {
+            return; // State hasn't actually changed, ignore
+          }
+        }
+        this.pushHistory(state);
+      }
+    }
+  }
+
+  pushHistory(state: any) {
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+    }
+    const stateCopy = JSON.parse(JSON.stringify(state));
+    this.history.push(stateCopy);
+    if (this.history.length > 50) {
+      this.history.shift();
+    } else {
+      this.historyIndex++;
+    }
+  }
+
+  undo() {
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      this.restoreState();
+    }
+  }
+
+  redo() {
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex++;
+      this.restoreState();
+    }
+  }
+
+  restoreState() {
+    if (this.diagramCanvas && this.history[this.historyIndex]) {
+      this.isUndoRedoAction = true;
+      const stateCopy = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+      this.diagramCanvas.loadCanvasState(stateCopy);
+      localStorage.setItem('pipeline-state', JSON.stringify(stateCopy));
+      
+      this.selectionType = null;
+      this.selectedItemData = null;
+      
+      setTimeout(() => {
+        this.isUndoRedoAction = false;
+      }, 0);
     }
   }
 

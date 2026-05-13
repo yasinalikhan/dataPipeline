@@ -139,6 +139,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
   lastPointerPos = { x: 0, y: 0 };
   
   draggingNode: DiagramNode | null = null;
+  dragRawPos: Point | null = null;
   
   // Connection state
   draftEdge: { sourceNodeId: string, currentPos: Point } | null = null;
@@ -149,11 +150,13 @@ export class DiagramCanvasComponent implements AfterViewInit {
 
   // API for parent
   addNode(type: string, data: any) {
+    const rawX = -this.panX / this.zoom + 100 + Math.random() * 50;
+    const rawY = -this.panY / this.zoom + 100 + Math.random() * 50;
     const newNode: DiagramNode = {
       id: 'node_' + Math.random().toString(36).substr(2, 9),
       type,
-      x: -this.panX / this.zoom + 100 + Math.random() * 50,
-      y: -this.panY / this.zoom + 100 + Math.random() * 50,
+      x: Math.round(rawX / 20) * 20,
+      y: Math.round(rawY / 20) * 20,
       data
     };
     this.nodes.push(newNode);
@@ -276,6 +279,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
 
   onNodeDragStart(data: {event: PointerEvent, node: DiagramNode}) {
     this.draggingNode = data.node;
+    this.dragRawPos = { x: data.node.x, y: data.node.y };
     this.lastPointerPos = { x: data.event.clientX, y: data.event.clientY };
     (data.event.target as Element)?.setPointerCapture(data.event.pointerId);
   }
@@ -302,11 +306,15 @@ export class DiagramCanvasComponent implements AfterViewInit {
       this.panY += dy;
       this.lastPointerPos = { x: event.clientX, y: event.clientY };
     } 
-    else if (this.draggingNode) {
+    else if (this.draggingNode && this.dragRawPos) {
       const dx = (event.clientX - this.lastPointerPos.x) / this.zoom;
       const dy = (event.clientY - this.lastPointerPos.y) / this.zoom;
-      this.draggingNode.x += dx;
-      this.draggingNode.y += dy;
+      this.dragRawPos.x += dx;
+      this.dragRawPos.y += dy;
+      
+      this.draggingNode.x = Math.round(this.dragRawPos.x / 20) * 20;
+      this.draggingNode.y = Math.round(this.dragRawPos.y / 20) * 20;
+      
       this.lastPointerPos = { x: event.clientX, y: event.clientY };
     }
     else if (this.draftEdge) {
@@ -323,6 +331,7 @@ export class DiagramCanvasComponent implements AfterViewInit {
     }
     if (this.draggingNode) {
       this.draggingNode = null;
+      this.dragRawPos = null;
       this.notifyChange();
       (event.target as Element)?.releasePointerCapture(event.pointerId);
     }
